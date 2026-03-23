@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cosmic Architect</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600&family=Orbitron:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --void: #010306;
+  --deep: #050d1a;
+  --surface: #0a1628;
+  --panel: rgba(5,12,28,0.95);
+  --rim: rgba(80,140,255,0.15);
+  --rim2: rgba(80,140,255,0.07);
+  --accent: #4f8fff;
+  --accent2: #a855f7;
+  --accent3: #06d6a0;
+  --amber: #f59e0b;
+  --text: #c8dcff;
+  --muted: #3d5470;
+  --muted2: #6a88aa;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%; height: 100%;
+  background: var(--void);
+  color: var(--text);
+  font-family: 'Rajdhani', sans-serif;
+  overflow: hidden;
+}
+
+/* ─── CANVAS ─── */
+#cosmos {
+  position: fixed; inset: 0; z-index: 0;
+  width: 100%; height: 100%;
+}
+
+/* ─── ONBOARDING OVERLAY ─── */
+#onboarding {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(1,3,6,0.97);
+  display: flex; align-items: center; justify-content: center;
+  transition: opacity 0.6s;
+}
+#onboarding.hidden { opacity: 0; pointer-events: none; }
+
+.ob-card {
+  width: 640px; max-width: 96vw;
+  background: var(--deep);
+  border: 1px solid var(--rim);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.ob-tabs {
+  display: flex; border-bottom: 1px solid var(--rim);
+}
+.ob-tab {
+  flex: 1; padding: 14px 8px; text-align: center;
+  font-family: 'Orbitron', monospace; font-size: 9px;
+  letter-spacing: 0.2em; color: var(--muted); cursor: pointer;
+  border-bottom: 2px solid transparent; transition: all 0.2s;
+  background: none; border-top: none; border-left: none; border-right: none;
+}
+.ob-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+.ob-panels { min-height: 360px; }
+.ob-panel { display: none; padding: 32px; }
+.ob-panel.active { display: block; }
+
+.ob-title {
+  font-family: 'Orbitron', monospace; font-size: 20px; font-weight: 700;
+  color: var(--text); margin-bottom: 10px; letter-spacing: 0.05em;
+}
+.ob-sub {
+  font-size: 14px; color: var(--muted2); line-height: 1.7; margin-bottom: 24px; font-weight: 300;
+}
+
+.flow-steps {
+  display: flex; gap: 0; margin-bottom: 28px;
+  border: 1px solid var(--rim); border-radius: 10px; overflow: hidden;
+}
+.flow-step {
+  flex: 1; padding: 16px 12px; text-align: center;
+  border-right: 1px solid var(--rim);
+}
+.flow-step:last-child { border-right: none; }
+.flow-step-icon { font-size: 20px; margin-bottom: 6px; }
+.flow-step-label { font-size: 11px; color: var(--muted2); line-height: 1.4; }
+.flow-step-label strong { display: block; color: var(--text); font-size: 12px; margin-bottom: 2px; }
+
+/* Slider demo */
+.slider-demo-list { display: flex; flex-direction: column; gap: 14px; }
+.sdemo { display: flex; flex-direction: column; gap: 4px; }
+.sdemo-header { display: flex; justify-content: space-between; align-items: baseline; }
+.sdemo-name { font-size: 13px; font-weight: 600; color: var(--text); }
+.sdemo-val { font-family: 'Orbitron', monospace; font-size: 11px; color: var(--accent); }
+.sdemo-track { height: 3px; background: var(--rim2); border-radius: 2px; position: relative; margin: 2px 0; }
+.sdemo-fill { height: 100%; border-radius: 2px; }
+.sdemo-desc { font-size: 11px; color: var(--muted2); font-weight: 300; }
+
+/* Mode cards */
+.mode-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.mode-card {
+  border: 1px solid var(--rim); border-radius: 10px; padding: 16px;
+  transition: border-color 0.2s;
+}
+.mode-card:hover { border-color: rgba(80,140,255,0.4); }
+.mode-card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.mode-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.mode-card-name { font-family: 'Orbitron', monospace; font-size: 11px; font-weight: 700; letter-spacing: 0.15em; }
+.mode-card-desc { font-size: 12px; color: var(--muted2); line-height: 1.6; font-weight: 300; }
+.mode-card-tip { font-size: 11px; color: var(--muted); margin-top: 6px; font-style: italic; }
+
+/* AI panel demo */
+.ai-demo { background: rgba(5,13,26,0.8); border: 1px solid var(--rim2); border-radius: 8px; overflow: hidden; }
+.ai-demo-header { padding: 10px 14px; border-bottom: 1px solid var(--rim2); font-family: 'Orbitron', monospace; font-size: 9px; letter-spacing: 0.2em; color: var(--muted2); }
+.ai-json { padding: 14px; font-family: 'Courier New', monospace; font-size: 11px; line-height: 1.9; color: var(--accent3); }
+.ai-poem { padding: 12px 14px; border-top: 1px solid var(--rim2); font-size: 12px; color: #c8a8ff; font-style: italic; line-height: 1.7; font-weight: 300; }
+
+.ob-footer {
+  padding: 20px 32px; border-top: 1px solid var(--rim);
+  display: flex; justify-content: space-between; align-items: center;
+}
+.ob-skip { background: none; border: none; color: var(--muted); font-size: 12px; cursor: pointer; letter-spacing: 0.1em; transition: color 0.2s; }
+.ob-skip:hover { color: var(--text); }
+.ob-next {
+  padding: 11px 32px; border-radius: 6px;
+  background: rgba(79,143,255,0.12); border: 1px solid rgba(79,143,255,0.4);
+  color: var(--accent); font-family: 'Orbitron', monospace;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.15em;
+  cursor: pointer; transition: all 0.2s;
+}
+.ob-next:hover { background: rgba(79,143,255,0.22); }
+.ob-next.launch { background: rgba(168,85,247,0.12); border-color: rgba(168,85,247,0.4); color: var(--accent2); }
+.ob-next.launch:hover { background: rgba(168,85,247,0.22); }
+
+/* ─── MAIN UI ─── */
+#ui {
+  position: fixed; inset: 0; z-index: 10;
+  display: grid;
+  grid-template-columns: 270px 1fr 290px;
+  grid-template-rows: 52px 1fr 140px;
+  pointer-events: none;
+}
+
+/* ─── HEADER ─── */
+#header {
+  grid-column: 1 / -1;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--rim);
+  background: var(--panel);
+  backdrop-filter: blur(16px);
+  pointer-events: all;
+}
+#logo {
+  font-family: 'Orbitron', monospace; font-size: 16px; font-weight: 900;
+  letter-spacing: 0.18em;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+#header-meta {
+  display: flex; gap: 20px; align-items: center;
+  font-family: 'Orbitron', monospace; font-size: 9px;
+  letter-spacing: 0.15em; color: var(--muted);
+}
+.hm-item { display: flex; gap: 6px; align-items: center; }
+.hm-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent3); animation: blink 2s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+#btn-help {
+  background: none; border: 1px solid var(--rim); color: var(--muted);
+  font-family: 'Orbitron', monospace; font-size: 9px; letter-spacing: 0.1em;
+  padding: 5px 12px; border-radius: 4px; cursor: pointer; transition: all 0.2s;
+}
+#btn-help:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ─── LEFT PANEL ─── */
+#panel-left {
+  grid-row: 2 / 4;
+  padding: 18px 14px;
+  border-right: 1px solid var(--rim);
+  background: var(--panel);
+  backdrop-filter: blur(16px);
+  overflow-y: auto;
+  pointer-events: all;
+  display: flex; flex-direction: column; gap: 22px;
+}
+
+.sec-title {
+  font-family: 'Orbitron', monospace; font-size: 8px; font-weight: 700;
+  letter-spacing: 0.3em; color: var(--muted); text-transform: uppercase;
+  padding-bottom: 8px; border-bottom: 1px solid var(--rim2); margin-bottom: 12px;
+}
+
+.sl-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 2px; }
+.sl-row { display: flex; justify-content: space-between; align-items: baseline; }
+.sl-name { font-size: 13px; font-weight: 600; color: var(--text); }
+.sl-val { font-family: 'Orbitron', monospace; font-size: 10px; color: var(--accent); }
+.sl-desc { font-size: 11px; color: var(--muted2); font-weight: 300; line-height: 1.4; }
+input[type=range] {
+  -webkit-appearance: none; width: 100%; height: 3px;
+  border-radius: 2px; outline: none; cursor: pointer;
+  background: linear-gradient(to right, var(--accent) var(--pct,50%), rgba(80,140,255,0.12) var(--pct,50%));
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 13px; height: 13px; border-radius: 50%;
+  background: var(--accent); border: 2px solid var(--void);
+  box-shadow: 0 0 6px var(--accent);
+}
+
+.mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.mode-btn {
+  background: var(--rim2); border: 1px solid var(--rim);
+  color: var(--muted2); font-family: 'Orbitron', monospace;
+  font-size: 9px; font-weight: 700; letter-spacing: 0.12em;
+  padding: 9px 8px; border-radius: 6px; cursor: pointer;
+  transition: all 0.15s; text-transform: uppercase; text-align: center;
+}
+.mode-btn:hover { background: rgba(79,143,255,0.1); color: var(--text); }
+.mode-btn.active { background: rgba(79,143,255,0.18); border-color: var(--accent); color: var(--accent); box-shadow: 0 0 10px rgba(79,143,255,0.2); }
+.mode-btn[data-mode=nebula].active { background: rgba(168,85,247,0.18); border-color: var(--accent2); color: var(--accent2); }
+.mode-btn[data-mode=blackhole].active { background: rgba(245,158,11,0.18); border-color: var(--amber); color: var(--amber); }
+.mode-btn[data-mode=quantum].active { background: rgba(6,214,160,0.18); border-color: var(--accent3); color: var(--accent3); }
+
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.stat-card { background: var(--rim2); border: 1px solid var(--rim); border-radius: 6px; padding: 10px 11px; }
+.stat-card-label { font-family: 'Orbitron', monospace; font-size: 8px; color: var(--muted); letter-spacing: 0.15em; text-transform: uppercase; }
+.stat-card-val { font-family: 'Orbitron', monospace; font-size: 15px; font-weight: 700; color: var(--text); margin-top: 3px; }
+
+/* ─── BOTTOM CENTER ─── */
+#bottom-center {
+  grid-column: 2; grid-row: 3;
+  display: flex; align-items: center; justify-content: center; gap: 28px;
+  border-top: 1px solid var(--rim);
+  background: var(--panel);
+  backdrop-filter: blur(16px);
+  pointer-events: all; padding: 0 28px;
+}
+.force-readout { font-family: 'Orbitron', monospace; }
+.force-label { font-size: 8px; color: var(--muted); letter-spacing: 0.2em; }
+.force-val { font-size: 30px; font-weight: 700; color: var(--text); line-height: 1; }
+.force-unit { font-size: 9px; color: var(--muted); margin-top: 1px; }
+
+#btn-bang {
+  position: relative; overflow: hidden;
+  font-family: 'Orbitron', monospace; font-size: 12px; font-weight: 900;
+  letter-spacing: 0.22em; padding: 15px 38px;
+  background: transparent; border: 1px solid rgba(168,85,247,0.5);
+  color: var(--accent2); border-radius: 4px; cursor: pointer; transition: all 0.2s;
+}
+#btn-bang::before {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(168,85,247,0.06), rgba(79,143,255,0.06));
+}
+#btn-bang:hover { border-color: var(--accent2); box-shadow: 0 0 28px rgba(168,85,247,0.25); color: #d084ff; }
+#btn-bang:disabled { opacity: 0.35; cursor: not-allowed; }
+.btn-ring {
+  position: absolute; inset: -1px; border-radius: 4px; pointer-events: none;
+  border: 1px solid transparent;
+  background: linear-gradient(var(--void),var(--void)) padding-box,
+              linear-gradient(135deg, var(--accent2), transparent 50%, var(--accent)) border-box;
+  animation: ring-rotate 3s linear infinite;
+}
+@keyframes ring-rotate { to { transform: rotate(360deg); } }
+
+#btn-reset {
+  background: transparent; border: 1px solid var(--rim); color: var(--muted2);
+  font-family: 'Orbitron', monospace; font-size: 9px; letter-spacing: 0.12em;
+  padding: 10px 18px; border-radius: 4px; cursor: pointer; transition: all 0.2s;
+}
+#btn-reset:hover { border-color: var(--muted2); color: var(--text); }
+
+/* ─── RIGHT PANEL ─── */
+#panel-right {
+  grid-row: 2 / 4;
+  padding: 18px 14px;
+  border-left: 1px solid var(--rim);
+  background: var(--panel);
+  backdrop-filter: blur(16px);
+  pointer-events: all;
+  display: flex; flex-direction: column; gap: 14px;
+  overflow-y: auto;
+}
+
+#ai-status { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--muted2); font-weight: 300; }
+#ai-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+#ai-dot.thinking { background: var(--amber); animation: blink 0.5s infinite; }
+#ai-dot.ready { background: var(--accent3); }
+#ai-dot.error { background: #f87171; }
+
+#physics-out {
+  background: rgba(5,13,26,0.8); border: 1px solid var(--rim2); border-radius: 6px;
+  padding: 12px 14px; font-family: 'Courier New', monospace; font-size: 10.5px;
+  line-height: 1.8; color: var(--muted2); white-space: pre-wrap; overflow-y: auto;
+  min-height: 90px; flex-shrink: 0;
+}
+#physics-out.live { color: var(--accent3); }
+
+#poetic-out {
+  background: rgba(168,85,247,0.04); border: 1px solid rgba(168,85,247,0.12);
+  border-radius: 6px; padding: 14px; font-size: 13px; line-height: 1.8;
+  color: #c8a8ff; font-style: italic; font-weight: 300; flex-shrink: 0;
+  min-height: 72px;
+}
+
+/* ─── SINGULARITY ─── */
+#singularity {
+  position: fixed; width: 18px; height: 18px; border-radius: 50%; z-index: 5;
+  background: radial-gradient(circle, #fff 0%, #b0caff 40%, #4f8fff 70%, transparent 100%);
+  box-shadow: 0 0 30px 8px rgba(79,143,255,0.5), 0 0 60px 18px rgba(79,143,255,0.15);
+  left: 50%; top: 50%; transform: translate(-50%,-50%);
+  transition: transform 0.4s cubic-bezier(0.68,-0.55,0.27,1.55), opacity 0.3s;
+}
+#singularity.gone { transform: translate(-50%,-50%) scale(0); opacity: 0; }
+#singularity.pop { animation: pop 0.4s forwards; }
+@keyframes pop {
+  0%   { transform: translate(-50%,-50%) scale(1); opacity: 1; }
+  50%  { transform: translate(-50%,-50%) scale(3.5); opacity: 0.5; }
+  100% { transform: translate(-50%,-50%) scale(0); opacity: 0; }
+}
+
+/* ─── LOADING ─── */
+#loading {
+  position: fixed; inset: 0; z-index: 300; background: var(--void);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px;
+  transition: opacity 0.7s;
+}
+#loading.out { opacity: 0; pointer-events: none; }
+#loading-logo { font-family: 'Orbitron', monospace; font-size: 28px; font-weight: 900; letter-spacing: 0.2em; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+#loading-bar-wrap { width: 180px; height: 2px; background: var(--rim2); border-radius: 1px; overflow: hidden; }
+#loading-bar { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width 0.4s; }
+#loading-txt { font-family: 'Orbitron', monospace; font-size: 9px; color: var(--muted); letter-spacing: 0.25em; }
+
+/* ─── SCROLLBAR ─── */
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-thumb { background: var(--rim); border-radius: 2px; }
+
+/* ─── RESPONSIVE ─── */
+@media (max-width: 768px) {
+  #ui { grid-template-columns: 1fr; grid-template-rows: 52px 1fr 56px; }
+  #panel-left, #panel-right { display: none; }
+  #bottom-center { grid-column: 1; }
+}
+</style>
+</head>
+<body>
+
+<!-- Loading -->
+<div id="loading">
+  <div id="loading-logo">COSMIC ARCHITECT</div>
+  <div id="loading-bar-wrap"><div id="loading-bar"></div></div>
+  <div id="loading-txt">INITIALIZING...</div>
+</div>
+
+<!-- Onboarding -->
+<div id="onboarding">
+  <div class="ob-card">
+    <div class="ob-tabs">
+      <button class="ob-tab active" onclick="obTab(0)">Overview</button>
+      <button class="ob-tab" onclick="obTab(1)">Physics Sliders</button>
+      <button class="ob-tab" onclick="obTab(2)">Visual Modes</button>
+      <button class="ob-tab" onclick="obTab(3)">AI Engine</button>
+    </div>
+    <div class="ob-panels">
+
+      <!-- Tab 0: Overview -->
+      <div class="ob-panel active" id="ob0">
+        <div class="ob-title">You are the architect of a universe.</div>
+        <div class="ob-sub">Set the fundamental laws of physics, trigger the Big Bang, and watch a cosmos be born. An AI engine reads your settings and writes the story of what you created.</div>
+        <div class="flow-steps">
+          <div class="flow-step">
+            <div class="flow-step-icon">🎚</div>
+            <div class="flow-step-label"><strong>Set physics</strong>Tune 5 sliders — gravity, force, dark energy, entropy, light speed</div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-step-icon">💥</div>
+            <div class="flow-step-label"><strong>Big Bang</strong>Press the button — particles explode from a singularity</div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-step-icon">🤖</div>
+            <div class="flow-step-label"><strong>AI profiles it</strong>JSON physics params + a 2-sentence poetic history appear</div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-step-icon">🔁</div>
+            <div class="flow-step-label"><strong>Iterate</strong>Reset and try extreme combos to create wildly different universes</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 1: Sliders -->
+      <div class="ob-panel" id="ob1">
+        <div class="ob-title">Physics sliders</div>
+        <div class="ob-sub">These 5 values define the laws of your universe. Set them before you press Big Bang — they affect both the visual simulation and the AI's universe profile.</div>
+        <div class="slider-demo-list">
+          <div class="sdemo">
+            <div class="sdemo-header"><span class="sdemo-name">Explosion Force</span><span class="sdemo-val">72</span></div>
+            <div class="sdemo-track"><div class="sdemo-fill" style="width:72%;background:#4f8fff;"></div></div>
+            <div class="sdemo-desc">How violent the Big Bang is. High = fast, wide explosion. Low = gentle, dense core.</div>
+          </div>
+          <div class="sdemo">
+            <div class="sdemo-header"><span class="sdemo-name">Gravity</span><span class="sdemo-val">18</span></div>
+            <div class="sdemo-track"><div class="sdemo-fill" style="width:18%;background:#4f8fff;"></div></div>
+            <div class="sdemo-desc">Attraction between particles and toward center. Low = particles fly apart freely.</div>
+          </div>
+          <div class="sdemo">
+            <div class="sdemo-header"><span class="sdemo-name">Dark Energy</span><span class="sdemo-val">65</span></div>
+            <div class="sdemo-track"><div class="sdemo-fill" style="width:65%;background:#a855f7;"></div></div>
+            <div class="sdemo-desc">Repulsive force pushing particles outward. High = runaway expanding universe.</div>
+          </div>
+          <div class="sdemo">
+            <div class="sdemo-header"><span class="sdemo-name">Entropy</span><span class="sdemo-val">40</span></div>
+            <div class="sdemo-track"><div class="sdemo-fill" style="width:40%;background:#4f8fff;"></div></div>
+            <div class="sdemo-desc">Randomness of the explosion. High = chaotic, diffuse. Low = uniform, ordered.</div>
+          </div>
+          <div class="sdemo">
+            <div class="sdemo-header"><span class="sdemo-name">Light Speed</span><span class="sdemo-val">85</span></div>
+            <div class="sdemo-track"><div class="sdemo-fill" style="width:85%;background:#06d6a0;"></div></div>
+            <div class="sdemo-desc">Maximum particle velocity. Scales time perception in the simulation.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 2: Visual Modes -->
+      <div class="ob-panel" id="ob2">
+        <div class="ob-title">Visual modes</div>
+        <div class="ob-sub">Choose a mode before pressing Big Bang. Each changes how particles look and behave in the simulation.</div>
+        <div class="mode-cards">
+          <div class="mode-card">
+            <div class="mode-card-header">
+              <div class="mode-dot" style="background:#4f8fff;box-shadow:0 0 6px #4f8fff;"></div>
+              <div class="mode-card-name" style="color:#4f8fff;">STARS</div>
+            </div>
+            <div class="mode-card-desc">Classic glowing spheres with soft blue-white halos. Particles pulse gently. Represents a standard stellar universe — galaxies, solar systems, star clusters.</div>
+            <div class="mode-card-tip">Best with: medium gravity + medium force</div>
+          </div>
+          <div class="mode-card">
+            <div class="mode-card-header">
+              <div class="mode-dot" style="background:#a855f7;box-shadow:0 0 6px #a855f7;"></div>
+              <div class="mode-card-name" style="color:#a855f7;">NEBULA</div>
+            </div>
+            <div class="mode-card-desc">Large diffuse clouds of ionized gas in purple/blue hues. Particles have bigger glow radius and trail faintly. Represents a young universe before stars condense.</div>
+            <div class="mode-card-tip">Best with: low gravity + high entropy</div>
+          </div>
+          <div class="mode-card">
+            <div class="mode-card-header">
+              <div class="mode-dot" style="background:#f59e0b;box-shadow:0 0 6px #f59e0b;"></div>
+              <div class="mode-card-name" style="color:#f59e0b;">BLACK HOLES</div>
+            </div>
+            <div class="mode-card-desc">3 gravitational singularities spawn near the center. Nearby particles are sucked in and destroyed. Accretion disks glow amber-orange around each void.</div>
+            <div class="mode-card-tip">Best with: high gravity + low dark energy</div>
+          </div>
+          <div class="mode-card">
+            <div class="mode-card-header">
+              <div class="mode-dot" style="background:#06d6a0;box-shadow:0 0 6px #06d6a0;"></div>
+              <div class="mode-card-name" style="color:#06d6a0;">QUANTUM</div>
+            </div>
+            <div class="mode-card-desc">Full-spectrum rainbow particles with visible motion trails. Erratic, probabilistic movement. Represents a universe at the subatomic scale where particles behave as waves.</div>
+            <div class="mode-card-tip">Best with: max entropy + max light speed</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 3: AI Engine -->
+      <div class="ob-panel" id="ob3">
+        <div class="ob-title">The AI physics engine</div>
+        <div class="ob-sub">After your Big Bang, an AI reads your slider values and generates a universe profile. It names your universe, calculates its physics constants, and writes a 2-sentence poetic history.</div>
+        <div class="ai-demo">
+          <div class="ai-demo-header">Physics Parameters — JSON output</div>
+          <div class="ai-json">{
+  <span style="color:#60a5fa">"universe_type"</span>: <span style="color:#34d399">"Cold Dark Expanse"</span>,
+  <span style="color:#60a5fa">"expansion_rate"</span>: <span style="color:#34d399">"runaway"</span>,
+  <span style="color:#60a5fa">"gravity_constant"</span>: <span style="color:#fbbf24">0.18</span>,
+  <span style="color:#60a5fa">"temperature_kelvin"</span>: <span style="color:#fbbf24">2400</span>,
+  <span style="color:#60a5fa">"stability"</span>: <span style="color:#34d399">"volatile"</span>,
+  <span style="color:#60a5fa">"timeline_years"</span>: <span style="color:#34d399">"Heat death in 400B years"</span>
+}</div>
+          <div class="ai-poem">"From a single trembling point it tore itself apart — light outrunning gravity before stars could form. This universe will expand forever, cold and vast, into absolute darkness."</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ob-footer">
+      <button class="ob-skip" onclick="closeOnboarding()">Skip intro</button>
+      <button class="ob-next launch" onclick="closeOnboarding()">LAUNCH ARCHITECT →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Canvas -->
+<canvas id="cosmos"></canvas>
+<div id="singularity"></div>
+
+<!-- Main UI -->
+<div id="ui">
+
+  <header id="header">
+    <div id="logo">COSMIC ARCHITECT</div>
+    <div id="header-meta">
+      <div class="hm-item"><div class="hm-dot"></div><span id="hm-particles">0 PARTICLES</span></div>
+      <div class="hm-item"><span id="hm-age">T+0.0s</span></div>
+      <div class="hm-item"><span id="hm-universe">—</span></div>
+    </div>
+    <button id="btn-help" onclick="openOnboarding()">? GUIDE</button>
+  </header>
+
+  <!-- Left panel -->
+  <aside id="panel-left">
+    <div>
+      <div class="sec-title">Physics Engine</div>
+      <div class="sl-group">
+        <div class="sl-row"><span class="sl-name">Explosion Force</span><span class="sl-val" id="v-force">50</span></div>
+        <input type="range" id="sl-force" min="1" max="100" value="50" step="1">
+        <div class="sl-desc">How violent the Big Bang is</div>
+      </div>
+      <div class="sl-group">
+        <div class="sl-row"><span class="sl-name">Gravity</span><span class="sl-val" id="v-gravity">30</span></div>
+        <input type="range" id="sl-gravity" min="0" max="100" value="30" step="1">
+        <div class="sl-desc">Pull toward center &amp; between particles</div>
+      </div>
+      <div class="sl-group">
+        <div class="sl-row"><span class="sl-name">Dark Energy</span><span class="sl-val" id="v-dark">20</span></div>
+        <input type="range" id="sl-dark" min="0" max="100" value="20" step="1">
+        <div class="sl-desc">Repulsive force driving expansion</div>
+      </div>
+      <div class="sl-group">
+        <div class="sl-row"><span class="sl-name">Entropy</span><span class="sl-val" id="v-entropy">40</span></div>
+        <input type="range" id="sl-entropy" min="0" max="100" value="40" step="1">
+        <div class="sl-desc">Randomness and disorder</div>
+      </div>
+      <div class="sl-group">
+        <div class="sl-row"><span class="sl-name">Light Speed</span><span class="sl-val" id="v-light">60</span></div>
+        <input type="range" id="sl-light" min="1" max="100" value="60" step="1">
+        <div class="sl-desc">Max particle velocity</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="sec-title">Visual Mode</div>
+      <div class="mode-grid">
+        <button class="mode-btn active" data-mode="stars">Stars</button>
+        <button class="mode-btn" data-mode="nebula">Nebula</button>
+        <button class="mode-btn" data-mode="blackhole">Black Holes</button>
+        <button class="mode-btn" data-mode="quantum">Quantum</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="sec-title">Universe Stats</div>
+      <div class="stat-grid">
+        <div class="stat-card"><div class="stat-card-label">Particles</div><div class="stat-card-val" id="st-particles">0</div></div>
+        <div class="stat-card"><div class="stat-card-label">Clusters</div><div class="stat-card-val" id="st-clusters">0</div></div>
+        <div class="stat-card"><div class="stat-card-label">Expansion</div><div class="stat-card-val" id="st-expansion">0%</div></div>
+        <div class="stat-card"><div class="stat-card-label">Temp (K)</div><div class="stat-card-val" id="st-temp">—</div></div>
+      </div>
+    </div>
+  </aside>
+
+  <div></div><!-- center spacer -->
+
+  <!-- Bottom center -->
+  <div id="bottom-center">
+    <div class="force-readout">
+      <div class="force-label">EXPLOSION FORCE</div>
+      <div class="force-val" id="fd">50</div>
+      <div class="force-unit">× 10¹² joules</div>
+    </div>
+    <button id="btn-bang"><div class="btn-ring"></div>⟨ BIG BANG ⟩</button>
+    <button id="btn-reset">RESET</button>
+  </div>
+
+  <!-- Right panel -->
+  <aside id="panel-right">
+    <div class="sec-title">AI Physics Engine</div>
+    <div id="ai-status">
+      <div id="ai-dot"></div>
+      <span id="ai-status-txt">Awaiting Big Bang…</span>
+    </div>
+    <div>
+      <div class="sec-title" style="margin-top:4px;">Universe Profile (JSON)</div>
+      <div id="physics-out">// Trigger the Big Bang to generate
+// your universe's physics profile.</div>
+    </div>
+    <div>
+      <div class="sec-title">Poetic History</div>
+      <div id="poetic-out">In the beginning, there was silence…</div>
+    </div>
+  </aside>
+</div>
+
+<script>
+// ════════════ ONBOARDING ════════════
+let obCurrent = 0;
+function obTab(n) {
+  document.querySelectorAll('.ob-tab').forEach((t,i) => t.classList.toggle('active', i===n));
+  document.querySelectorAll('.ob-panel').forEach((p,i) => p.classList.toggle('active', i===n));
+  obCurrent = n;
+}
+function closeOnboarding() {
+  document.getElementById('onboarding').classList.add('hidden');
+  setTimeout(() => document.getElementById('onboarding').style.display='none', 700);
+}
+function openOnboarding() {
+  const el = document.getElementById('onboarding');
+  el.style.display = 'flex';
+  requestAnimationFrame(() => el.classList.remove('hidden'));
+}
+
+// ════════════ CANVAS ════════════
+const canvas = document.getElementById('cosmos');
+const ctx = canvas.getContext('2d');
+let W, H;
+function resize() { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
+resize();
+window.addEventListener('resize', resize);
+
+// ════════════ STATE ════════════
+let particles = [], bgStars = [], frame = 0, universeAge = 0, animating = false, visualMode = 'stars';
+function sv(id) { return +document.getElementById(id).value; }
+
+// ════════════ BG STARS ════════════
+function genBg() {
+  bgStars = [];
+  for (let i=0;i<500;i++) bgStars.push({x:Math.random()*2000-1000,y:Math.random()*2000-1000,r:Math.random()*1.1+0.15,a:Math.random()*0.4+0.1,tw:Math.random()*Math.PI*2});
+}
+genBg();
+
+// ════════════ PARTICLES ════════════
+function makeParticle() {
+  const force=sv('sl-force'), entropy=sv('sl-entropy'), light=sv('sl-light'), dark=sv('sl-dark'), gravity=sv('sl-gravity');
+  const angle = Math.random()*Math.PI*2;
+  const speed = (Math.random()*0.5+0.5)*force*0.08*(light/60);
+  let hue = visualMode==='nebula' ? Math.random()*80+240
+           : visualMode==='blackhole' ? Math.random()*40+10
+           : visualMode==='quantum' ? Math.random()*360
+           : Math.random()*60+180;
+  return {
+    x: W/2+(Math.random()-0.5)*entropy*0.5,
+    y: H/2+(Math.random()-0.5)*entropy*0.5,
+    vx: Math.cos(angle)*speed+(Math.random()-0.5)*entropy*0.04,
+    vy: Math.sin(angle)*speed+(Math.random()-0.5)*entropy*0.04,
+    r: Math.random()*2+0.5, hue, sat:60+Math.random()*30, lit:55+Math.random()*30,
+    alpha:1, life:1, trail:[],
+    maxSpeed: light*0.12, darkF:dark/100, gravF:gravity/100, isBlackHole:false
+  };
+}
+
+// ════════════ BIG BANG ════════════
+async function triggerBigBang() {
+  document.getElementById('btn-bang').disabled = true;
+  universeAge = 0;
+  const sing = document.getElementById('singularity');
+  sing.classList.remove('gone'); sing.classList.add('pop');
+  setTimeout(() => sing.classList.add('gone'), 400);
+
+  particles = [];
+  const count = Math.floor(150 + sv('sl-force')*35);
+  for (let i=0;i<count;i++) particles.push(makeParticle());
+
+  if (visualMode === 'blackhole') {
+    for (let i=0;i<3;i++) {
+      const a=Math.random()*Math.PI*2, d=60+Math.random()*40;
+      particles.push({x:W/2+Math.cos(a)*d,y:H/2+Math.sin(a)*d,vx:0,vy:0,r:12,hue:0,sat:0,lit:0,alpha:1,life:1,trail:[],maxSpeed:0,darkF:0,gravF:0,isBlackHole:true});
+    }
+  }
+  animating = true;
+  await callAI();
+  document.getElementById('btn-bang').disabled = false;
+}
+
+// ════════════ AI CALL ════════════
+async function callAI() {
+  const dot = document.getElementById('ai-dot');
+  const stxt = document.getElementById('ai-status-txt');
+  const pout = document.getElementById('physics-out');
+  const poet = document.getElementById('poetic-out');
+
+  dot.className = 'thinking';
+  stxt.textContent = 'Consulting physics engine…';
+  pout.textContent = '// Calculating…';
+  pout.classList.remove('live');
+  poet.textContent = '';
+
+  try {
+    const res = await fetch('/api/universe', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        force: sv('sl-force'), gravity: sv('sl-gravity'),
+        dark: sv('sl-dark'), entropy: sv('sl-entropy'), light: sv('sl-light')
+      })
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+
+    pout.textContent = JSON.stringify(data.params, null, 2);
+    pout.classList.add('live');
+    poet.textContent = data.poetic_history || '';
+    document.getElementById('hm-universe').textContent = (data.params.universe_type||'—').toUpperCase();
+    document.getElementById('st-temp').textContent = data.params.temperature_kelvin > 99999 ? '∞' : (data.params.temperature_kelvin||'—');
+    dot.className = 'ready';
+    stxt.textContent = 'Universe profiled.';
+  } catch(err) {
+    dot.className = 'error';
+    stxt.textContent = 'AI engine offline.';
+    pout.textContent = '// Could not reach AI engine.\n// Check ANTHROPIC_API_KEY on server.\n// Error: ' + err.message;
+    poet.textContent = 'Born from chaos unwitnessed — its laws unwritten, its fate unknown.';
+  }
+}
+
+// ════════════ SIMULATION ════════════
+function updateParticles() {
+  const gravity = sv('sl-gravity')/100;
+  const blackholes = particles.filter(p=>p.isBlackHole);
+
+  for (let i=0;i<particles.length;i++) {
+    const p = particles[i];
+    if (p.isBlackHole) continue;
+
+    if (visualMode !== 'stars') {
+      p.trail.push({x:p.x,y:p.y});
+      if (p.trail.length>8) p.trail.shift();
+    } else p.trail=[];
+
+    const dx=p.x-W/2, dy=p.y-H/2, dist=Math.sqrt(dx*dx+dy*dy)+0.1;
+    p.vx += (dx/dist)*p.darkF*0.015 - (dx/dist)*gravity*0.02;
+    p.vy += (dy/dist)*p.darkF*0.015 - (dy/dist)*gravity*0.02;
+
+    for (const bh of blackholes) {
+      const bdx=bh.x-p.x, bdy=bh.y-p.y, bd=Math.sqrt(bdx*bdx+bdy*bdy)+1;
+      if (bd<15) { p.life=0; continue; }
+      const f=Math.min(3,80/(bd*bd));
+      p.vx+=bdx*f; p.vy+=bdy*f;
+    }
+
+    if (gravity>0.4 && i%3===0) {
+      for (let j=i+1;j<Math.min(i+15,particles.length);j++) {
+        const q=particles[j];
+        if (q.isBlackHole) continue;
+        const cdx=q.x-p.x, cdy=q.y-p.y, cd=Math.sqrt(cdx*cdx+cdy*cdy)+1;
+        if (cd<60) { const f=gravity*0.0008; p.vx+=cdx*f; p.vy+=cdy*f; q.vx-=cdx*f; q.vy-=cdy*f; }
+      }
+    }
+
+    const spd=Math.sqrt(p.vx*p.vx+p.vy*p.vy);
+    if (spd>p.maxSpeed) { p.vx=(p.vx/spd)*p.maxSpeed; p.vy=(p.vy/spd)*p.maxSpeed; }
+    p.x+=p.vx; p.y+=p.vy;
+    if (p.x<-200||p.x>W+200||p.y<-200||p.y>H+200) p.life-=0.02;
+    p.alpha=Math.max(0,p.life)*0.9;
+  }
+  particles=particles.filter(p=>p.life>0);
+}
+
+function drawParticle(p) {
+  if (p.alpha<=0) return;
+  if (p.trail.length>1) {
+    ctx.beginPath(); ctx.moveTo(p.trail[0].x,p.trail[0].y);
+    for (let i=1;i<p.trail.length;i++) ctx.lineTo(p.trail[i].x,p.trail[i].y);
+    ctx.lineTo(p.x,p.y);
+    ctx.strokeStyle=`hsla(${p.hue},${p.sat}%,${p.lit}%,${p.alpha*0.2})`; ctx.lineWidth=p.r*0.5; ctx.stroke();
+  }
+  if (p.isBlackHole) {
+    const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.r*4.5);
+    g.addColorStop(0,'rgba(0,0,0,1)'); g.addColorStop(0.35,'rgba(255,120,0,0.45)'); g.addColorStop(1,'transparent');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(p.x,p.y,p.r*4.5,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#000'; ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='rgba(245,158,11,0.35)'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.ellipse(p.x,p.y,p.r*3.2,p.r*0.8,frame*0.018,0,Math.PI*2); ctx.stroke();
+    return;
+  }
+  const gr=p.r*(visualMode==='nebula'?7:visualMode==='quantum'?5:3.5);
+  const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,gr);
+  g.addColorStop(0,`hsla(${p.hue},${p.sat}%,${p.lit+22}%,${p.alpha*0.92})`);
+  g.addColorStop(0.3,`hsla(${p.hue},${p.sat}%,${p.lit}%,${p.alpha*0.4})`);
+  g.addColorStop(1,'transparent');
+  ctx.fillStyle=g; ctx.beginPath(); ctx.arc(p.x,p.y,gr,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle=`hsla(${p.hue},${p.sat}%,${p.lit+28}%,${p.alpha})`;
+  ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill();
+}
+
+// ════════════ RENDER LOOP ════════════
+function loop() {
+  requestAnimationFrame(loop);
+  frame++;
+  ctx.fillStyle='rgba(1,3,6,0.16)';
+  ctx.fillRect(0,0,W,H);
+
+  const t=frame*0.006;
+  for (const s of bgStars) {
+    const sx=((s.x+W*0.06)%W+W)%W, sy=((s.y+H*0.06)%H+H)%H;
+    ctx.globalAlpha=s.a*(Math.sin(t+s.tw)*0.3+0.7);
+    ctx.fillStyle='#b8ccff';
+    ctx.beginPath(); ctx.arc(sx,sy,s.r,0,Math.PI*2); ctx.fill();
+  }
+  ctx.globalAlpha=1;
+
+  if (animating) {
+    updateParticles();
+    for (const p of particles) drawParticle(p);
+    universeAge+=0.016;
+    document.getElementById('hm-particles').textContent=particles.length+' PARTICLES';
+    document.getElementById('hm-age').textContent='T+'+universeAge.toFixed(1)+'s';
+    document.getElementById('st-particles').textContent=particles.length;
+
+    let cl=0; const chk=new Set();
+    for (let i=0;i<particles.length;i++) {
+      if (chk.has(i)||particles[i].isBlackHole) continue;
+      let g=false;
+      for (let j=i+1;j<particles.length;j++) {
+        if (particles[j].isBlackHole) continue;
+        const dx=particles[i].x-particles[j].x, dy=particles[i].y-particles[j].y;
+        if (dx*dx+dy*dy<3600) { g=true; chk.add(j); }
+      }
+      if (g) { cl++; chk.add(i); }
+    }
+    document.getElementById('st-clusters').textContent=cl;
+
+    const exp=particles.length>0?Math.round(Math.min(100,particles.filter(p=>{const dx=p.x-W/2,dy=p.y-H/2;return Math.sqrt(dx*dx+dy*dy)>100;}).length/particles.length*100)):0;
+    document.getElementById('st-expansion').textContent=exp+'%';
+  }
+}
+loop();
+
+// ════════════ CONTROLS ════════════
+document.getElementById('btn-bang').addEventListener('click', triggerBigBang);
+
+document.getElementById('btn-reset').addEventListener('click', () => {
+  particles=[]; animating=false; universeAge=0;
+  document.getElementById('st-particles').textContent='0';
+  document.getElementById('st-clusters').textContent='0';
+  document.getElementById('st-expansion').textContent='0%';
+  document.getElementById('st-temp').textContent='—';
+  document.getElementById('hm-particles').textContent='0 PARTICLES';
+  document.getElementById('hm-age').textContent='T+0.0s';
+  document.getElementById('hm-universe').textContent='—';
+  document.getElementById('physics-out').textContent='// Trigger the Big Bang to generate\n// your universe\'s physics profile.';
+  document.getElementById('physics-out').classList.remove('live');
+  document.getElementById('poetic-out').textContent='In the beginning, there was silence…';
+  document.getElementById('ai-dot').className='';
+  document.getElementById('ai-status-txt').textContent='Awaiting Big Bang…';
+  const sing=document.getElementById('singularity');
+  sing.className=''; sing.style.animation='none'; void sing.offsetHeight; sing.style.animation='';
+});
+
+document.querySelectorAll('.mode-btn').forEach(btn => {
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active'); visualMode=btn.dataset.mode;
+  });
+});
+
+['force','gravity','dark','entropy','light'].forEach(id => {
+  const el=document.getElementById('sl-'+id);
+  const out=document.getElementById('v-'+id);
+  function upd() {
+    const v=el.value; out.textContent=v;
+    if(id==='force') document.getElementById('fd').textContent=v;
+    el.style.setProperty('--pct',((+v - +el.min)/(+el.max - +el.min)*100)+'%');
+  }
+  el.addEventListener('input',upd); upd();
+});
+
+// ════════════ LOADING ════════════
+const phases=['CALIBRATING SPACETIME…','LOADING QUANTUM FIELDS…','PRIMING SINGULARITY…','SYSTEMS ONLINE'];
+let lp=0;
+const li=setInterval(()=>{
+  lp++;
+  document.getElementById('loading-bar').style.width=(lp*25)+'%';
+  document.getElementById('loading-txt').textContent=phases[Math.min(lp,3)];
+  if(lp>=4){
+    clearInterval(li);
+    setTimeout(()=>{document.getElementById('loading').classList.add('out');},400);
+  }
+},500);
+</script>
+</body>
+</html>
