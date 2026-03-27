@@ -179,6 +179,36 @@ html, body {
 }
 #btn-help:hover { border-color: var(--accent); color: var(--accent); }
 
+#btn-sound {
+  background: none; border: 1px solid var(--rim); color: var(--muted);
+  font-family: 'Orbitron', monospace; font-size: 9px; letter-spacing: 0.1em;
+  padding: 5px 12px; border-radius: 4px; cursor: pointer; transition: all 0.2s;
+  display: flex; align-items: center; gap: 7px;
+}
+#btn-sound:hover { border-color: var(--accent); color: var(--accent); }
+#btn-sound.on { border-color: rgba(6,214,160,0.5); color: var(--accent3); }
+#sound-bars { display: flex; align-items: flex-end; gap: 2px; height: 12px; }
+#sound-bars span { display: block; width: 2.5px; background: currentColor; border-radius: 1px; transition: height 0.15s; }
+#btn-sound.on #sound-bars span:nth-child(1) { animation: bar-dance 0.8s 0s ease-in-out infinite alternate; }
+#btn-sound.on #sound-bars span:nth-child(2) { animation: bar-dance 0.8s 0.2s ease-in-out infinite alternate; }
+#btn-sound.on #sound-bars span:nth-child(3) { animation: bar-dance 0.8s 0.4s ease-in-out infinite alternate; }
+@keyframes bar-dance { 0%{transform:scaleY(0.4)} 100%{transform:scaleY(1.4)} }
+
+#btn-sound {
+  background: none; border: 1px solid var(--rim); color: var(--muted);
+  font-family: 'Orbitron', monospace; font-size: 9px; letter-spacing: 0.1em;
+  padding: 5px 12px; border-radius: 4px; cursor: pointer; transition: all 0.2s;
+  display: flex; align-items: center; gap: 6px;
+}
+#btn-sound:hover { border-color: var(--accent3); color: var(--accent3); }
+#btn-sound.on { border-color: rgba(6,214,160,0.4); color: var(--accent3); }
+#sound-bars { display: flex; gap: 2px; align-items: flex-end; height: 12px; }
+#sound-bars span { width: 2px; background: currentColor; border-radius: 1px; animation: none; transform-origin: bottom; }
+#btn-sound.on #sound-bars span:nth-child(1) { animation: bar 0.8s ease-in-out infinite; }
+#btn-sound.on #sound-bars span:nth-child(2) { animation: bar 0.8s ease-in-out infinite 0.15s; }
+#btn-sound.on #sound-bars span:nth-child(3) { animation: bar 0.8s ease-in-out infinite 0.3s; }
+@keyframes bar { 0%,100%{height:3px} 50%{height:12px} }
+
 /* ─── LEFT PANEL ─── */
 #panel-left {
   grid-row: 2 / 4;
@@ -339,6 +369,14 @@ input[type=range]::-webkit-slider-thumb {
 /* ─── SCROLLBAR ─── */
 ::-webkit-scrollbar { width: 3px; }
 ::-webkit-scrollbar-thumb { background: var(--rim); border-radius: 2px; }
+
+#btn-sound {
+  background: transparent; border: 1px solid var(--rim); color: var(--muted2);
+  font-family: 'Orbitron', monospace; font-size: 9px; letter-spacing: 0.12em;
+  padding: 5px 12px; border-radius: 4px; cursor: pointer; transition: all 0.2s;
+}
+#btn-sound:hover { border-color: var(--accent3); color: var(--accent3); }
+#btn-sound.on { border-color: var(--accent3); color: var(--accent3); }
 
 /* ─── RESPONSIVE ─── */
 @media (max-width: 768px) {
@@ -505,7 +543,10 @@ input[type=range]::-webkit-slider-thumb {
       <div class="hm-item"><span id="hm-age">T+0.0s</span></div>
       <div class="hm-item"><span id="hm-universe">—</span></div>
     </div>
-    <button id="btn-help" onclick="openOnboarding()">? GUIDE</button>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button id="btn-sound" onclick="toggleSound()">◼ SOUND OFF</button>
+      <button id="btn-help" onclick="openOnboarding()">? GUIDE</button>
+    </div>
   </header>
 
   <!-- Left panel -->
@@ -668,6 +709,7 @@ async function triggerBigBang() {
     }
   }
   animating = true;
+  if (soundEnabled) { initAudio(); playBigBang(sv('sl-force')); setTimeout(() => startAmbient(visualMode), 1800); }
   await callAI();
   document.getElementById('btn-bang').disabled = false;
 }
@@ -830,6 +872,7 @@ document.getElementById('btn-bang').addEventListener('click', triggerBigBang);
 
 document.getElementById('btn-reset').addEventListener('click', () => {
   particles=[]; animating=false; universeAge=0;
+  stopAmbient();
   document.getElementById('st-particles').textContent='0';
   document.getElementById('st-clusters').textContent='0';
   document.getElementById('st-expansion').textContent='0%';
@@ -850,6 +893,7 @@ document.querySelectorAll('.mode-btn').forEach(btn => {
   btn.addEventListener('click', ()=>{
     document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('active'));
     btn.classList.add('active'); visualMode=btn.dataset.mode;
+    if (animating && soundEnabled) startAmbient(visualMode);
   });
 });
 
@@ -863,6 +907,218 @@ document.querySelectorAll('.mode-btn').forEach(btn => {
   }
   el.addEventListener('input',upd); upd();
 });
+
+// ════════════ SOUND ENGINE ════════════
+let audioCtx = null;
+let soundEnabled = false;
+let ambientNode = null;
+let ambientGain = null;
+let currentMode = null;
+
+function initAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+}
+
+function toggleSound() {
+  soundEnabled = !soundEnabled;
+  const btn = document.getElementById('btn-sound');
+  if (soundEnabled) {
+    initAudio();
+    btn.textContent = '▶ SOUND ON';
+    btn.classList.add('on');
+    if (animating) startAmbient(visualMode);
+  } else {
+    btn.textContent = '◼ SOUND OFF';
+    btn.classList.remove('on');
+    stopAmbient();
+  }
+}
+
+// ── Big Bang cinematic boom ──
+function playBigBang(force) {
+  if (!soundEnabled || !audioCtx) return;
+  const t = audioCtx.currentTime;
+  const vol = 0.3 + (force / 100) * 0.5;
+
+  // Sub-bass rumble — deep LFO filtered noise
+  const bufSize = audioCtx.sampleRate * 2.5;
+  const buf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < bufSize; i++) data[i] = (Math.random() * 2 - 1);
+
+  const noise = audioCtx.createBufferSource();
+  noise.buffer = buf;
+
+  const lpf = audioCtx.createBiquadFilter();
+  lpf.type = 'lowpass';
+  lpf.frequency.setValueAtTime(80, t);
+  lpf.frequency.exponentialRampToValueAtTime(20, t + 2.5);
+
+  const boomGain = audioCtx.createGain();
+  boomGain.gain.setValueAtTime(0, t);
+  boomGain.gain.linearRampToValueAtTime(vol * 1.4, t + 0.04);
+  boomGain.gain.exponentialRampToValueAtTime(0.001, t + 2.5);
+
+  noise.connect(lpf); lpf.connect(boomGain); boomGain.connect(audioCtx.destination);
+  noise.start(t); noise.stop(t + 2.5);
+
+  // Crack — sharp transient
+  const crackBuf = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.15, audioCtx.sampleRate);
+  const cd = crackBuf.getChannelData(0);
+  for (let i = 0; i < cd.length; i++) cd[i] = (Math.random() * 2 - 1) * Math.exp(-i / (cd.length * 0.08));
+  const crack = audioCtx.createBufferSource();
+  crack.buffer = crackBuf;
+  const crackHpf = audioCtx.createBiquadFilter();
+  crackHpf.type = 'highpass'; crackHpf.frequency.value = 1200;
+  const crackGain = audioCtx.createGain();
+  crackGain.gain.setValueAtTime(vol * 0.9, t);
+  crackGain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+  crack.connect(crackHpf); crackHpf.connect(crackGain); crackGain.connect(audioCtx.destination);
+  crack.start(t);
+
+  // Cinematic swell tone — low sine rising
+  const osc = audioCtx.createOscillator();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(28, t + 0.1);
+  osc.frequency.exponentialRampToValueAtTime(55, t + 1.8);
+  const swellGain = audioCtx.createGain();
+  swellGain.gain.setValueAtTime(0, t + 0.1);
+  swellGain.gain.linearRampToValueAtTime(vol * 0.4, t + 0.5);
+  swellGain.gain.exponentialRampToValueAtTime(0.001, t + 3.5);
+  osc.connect(swellGain); swellGain.connect(audioCtx.destination);
+  osc.start(t + 0.1); osc.stop(t + 3.5);
+
+  // High shimmer sweep
+  const shimmer = audioCtx.createOscillator();
+  shimmer.type = 'sawtooth';
+  shimmer.frequency.setValueAtTime(800, t + 0.3);
+  shimmer.frequency.exponentialRampToValueAtTime(3200, t + 1.2);
+  const shimFilter = audioCtx.createBiquadFilter();
+  shimFilter.type = 'bandpass'; shimFilter.frequency.value = 2000; shimFilter.Q.value = 3;
+  const shimGain = audioCtx.createGain();
+  shimGain.gain.setValueAtTime(0, t + 0.3);
+  shimGain.gain.linearRampToValueAtTime(vol * 0.08, t + 0.5);
+  shimGain.gain.exponentialRampToValueAtTime(0.001, t + 1.4);
+  shimmer.connect(shimFilter); shimFilter.connect(shimGain); shimGain.connect(audioCtx.destination);
+  shimmer.start(t + 0.3); shimmer.stop(t + 1.5);
+}
+
+// ── Ambient drones — mode specific ──
+function stopAmbient() {
+  if (ambientGain) {
+    const t = audioCtx ? audioCtx.currentTime : 0;
+    ambientGain.gain.setValueAtTime(ambientGain.gain.value, t);
+    ambientGain.gain.exponentialRampToValueAtTime(0.0001, t + 1.5);
+    setTimeout(() => { if (ambientNode) { try { ambientNode.forEach(n=>n.stop()); } catch(e){} ambientNode=null; } }, 1600);
+  }
+  ambientGain = null; currentMode = null;
+}
+
+function startAmbient(mode) {
+  if (!soundEnabled || !audioCtx) return;
+  if (currentMode === mode) return;
+  stopAmbient();
+  currentMode = mode;
+  const t = audioCtx.currentTime + 0.1;
+  ambientGain = audioCtx.createGain();
+  ambientGain.gain.setValueAtTime(0, t);
+  ambientGain.gain.linearRampToValueAtTime(0.18, t + 2);
+  ambientGain.connect(audioCtx.destination);
+  ambientNode = [];
+
+  if (mode === 'stars') {
+    // Warm, slowly evolving pad — two detuned sines + slow LFO
+    [55, 82.4, 110, 164.8].forEach((freq, i) => {
+      const o = audioCtx.createOscillator();
+      o.type = 'sine';
+      o.frequency.value = freq * (1 + (i % 2 === 0 ? 0.002 : -0.003));
+      const og = audioCtx.createGain(); og.gain.value = [0.5, 0.3, 0.25, 0.15][i];
+      o.connect(og); og.connect(ambientGain);
+      o.start(t); ambientNode.push(o);
+    });
+    // Gentle shimmer
+    const lfo = audioCtx.createOscillator(); lfo.frequency.value = 0.12; lfo.type = 'sine';
+    const lfoGain = audioCtx.createGain(); lfoGain.gain.value = 8;
+    lfo.connect(lfoGain);
+    lfoGain.connect(ambientNode[0].frequency);
+    lfo.start(t); ambientNode.push(lfo);
+
+  } else if (mode === 'nebula') {
+    // Ethereal — high sustained tones with gentle vibrato
+    [220, 329.6, 440, 523.25].forEach((freq, i) => {
+      const o = audioCtx.createOscillator();
+      o.type = i < 2 ? 'sine' : 'triangle';
+      o.frequency.value = freq;
+      const vib = audioCtx.createOscillator(); vib.frequency.value = 0.4 + i * 0.1;
+      const vibG = audioCtx.createGain(); vibG.gain.value = 3;
+      vib.connect(vibG); vibG.connect(o.frequency);
+      vib.start(t); ambientNode.push(vib);
+      const og = audioCtx.createGain(); og.gain.value = [0.3, 0.2, 0.15, 0.1][i];
+      const filter = audioCtx.createBiquadFilter(); filter.type = 'lowpass'; filter.frequency.value = 1800;
+      o.connect(filter); filter.connect(og); og.connect(ambientGain);
+      o.start(t); ambientNode.push(o);
+    });
+
+  } else if (mode === 'blackhole') {
+    // Eerie — deep dissonant drones with tension
+    [27.5, 29.1, 36.7, 41.2].forEach((freq, i) => {
+      const o = audioCtx.createOscillator();
+      o.type = i % 2 === 0 ? 'sawtooth' : 'square';
+      o.frequency.value = freq;
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'lowpass'; filter.frequency.value = 180; filter.Q.value = 8;
+      // Slowly modulate filter for breathing effect
+      const lfo = audioCtx.createOscillator(); lfo.frequency.value = 0.05 + i * 0.02;
+      const lfoG = audioCtx.createGain(); lfoG.gain.value = 60;
+      lfo.connect(lfoG); lfoG.connect(filter.frequency);
+      lfo.start(t); ambientNode.push(lfo);
+      const og = audioCtx.createGain(); og.gain.value = [0.4, 0.35, 0.25, 0.2][i];
+      o.connect(filter); filter.connect(og); og.connect(ambientGain);
+      o.start(t); ambientNode.push(o);
+    });
+    // Heartbeat-like pulse
+    const pulse = audioCtx.createOscillator(); pulse.type = 'sine'; pulse.frequency.value = 40;
+    const pulseEnv = audioCtx.createGain(); pulseEnv.gain.value = 0;
+    pulse.connect(pulseEnv); pulseEnv.connect(ambientGain);
+    pulse.start(t); ambientNode.push(pulse);
+    let beat = t;
+    const beatInterval = setInterval(() => {
+      if (!soundEnabled || currentMode !== 'blackhole') { clearInterval(beatInterval); return; }
+      const now = audioCtx.currentTime;
+      pulseEnv.gain.setValueAtTime(0, now);
+      pulseEnv.gain.linearRampToValueAtTime(0.5, now + 0.06);
+      pulseEnv.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+    }, 1800);
+
+  } else if (mode === 'quantum') {
+    // Glitchy, crystalline — high bell-like tones with random sparks
+    const baseFreqs = [523.25, 659.3, 783.99, 1046.5];
+    baseFreqs.forEach((freq, i) => {
+      const o = audioCtx.createOscillator();
+      o.type = 'triangle'; o.frequency.value = freq;
+      const og = audioCtx.createGain(); og.gain.value = [0.15, 0.1, 0.08, 0.06][i];
+      const filter = audioCtx.createBiquadFilter(); filter.type = 'bandpass';
+      filter.frequency.value = freq; filter.Q.value = 5;
+      o.connect(filter); filter.connect(og); og.connect(ambientGain);
+      o.start(t); ambientNode.push(o);
+    });
+    // Random quantum sparks
+    const sparkInterval = setInterval(() => {
+      if (!soundEnabled || currentMode !== 'quantum') { clearInterval(sparkInterval); return; }
+      if (!audioCtx) return;
+      const now = audioCtx.currentTime;
+      const sparkFreq = 800 + Math.random() * 2400;
+      const sparkOsc = audioCtx.createOscillator();
+      sparkOsc.type = 'sine'; sparkOsc.frequency.value = sparkFreq;
+      const sparkGain = audioCtx.createGain();
+      sparkGain.gain.setValueAtTime(0.06, now);
+      sparkGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.08);
+      sparkOsc.connect(sparkGain); sparkGain.connect(audioCtx.destination);
+      sparkOsc.start(now); sparkOsc.stop(now + 0.1);
+    }, 180 + Math.random() * 320);
+  }
+}
 
 // ════════════ LOADING ════════════
 const phases=['CALIBRATING SPACETIME…','LOADING QUANTUM FIELDS…','PRIMING SINGULARITY…','SYSTEMS ONLINE'];
